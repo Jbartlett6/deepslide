@@ -7,3 +7,6 @@ preds*
 train*
 vis*
 wsi*
+__pycache__*
+log_*.csv
+OES_tools/Slide Scanning Log.xlsx - Labelling.csv

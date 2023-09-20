@@ -60,7 +60,7 @@ def calculate_confusion_matrix(all_labels: np.ndarray,
 
     cm = pd.crosstab(index=actual, columns=predicted, normalize="index", dropna=False)
 
-    cm.style.hide_index()
+    cm.style.hide(axis = 'index')
     print(cm)
 
 

@@ -279,11 +279,13 @@ def train_helper(model: torchvision.models.resnet.ResNet,
             train_all_labels[start:end] = train_labels.detach().cpu()
             train_all_predicts[start:end] = train_preds.detach().cpu()
 
+        print('Training confusion Matrix:')
         calculate_confusion_matrix(all_labels=train_all_labels.numpy(),
                                    all_predicts=train_all_predicts.numpy(),
                                    classes=classes,
                                    num_classes=num_classes)
-
+        print('\n')
+        
         # Store training diagnostics.
         train_loss = train_running_loss / dataset_sizes["train"]
         train_acc = train_running_corrects / dataset_sizes["train"]
@@ -319,10 +321,12 @@ def train_helper(model: torchvision.models.resnet.ResNet,
             val_all_labels[start:end] = val_labels.detach().cpu()
             val_all_predicts[start:end] = val_preds.detach().cpu()
 
+        print('Validation confusion Matrix:')
         calculate_confusion_matrix(all_labels=val_all_labels.numpy(),
                                    all_predicts=val_all_predicts.numpy(),
                                    classes=classes,
                                    num_classes=num_classes)
+        print('\n')
 
         # Store validation diagnostics.
         val_loss = val_running_loss / dataset_sizes["val"]

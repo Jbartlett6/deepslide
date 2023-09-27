@@ -657,7 +657,7 @@ class Tracker():
         self.iter_counter = 0
         self.writer = SummaryWriter()
 
-        self.early_stopping_limit = 2
+        self.early_stopping_limit = 10
         self.best_val_loss = math.inf
         self.best_val_acc = 0
         self.best_val_loss_epoch = 0

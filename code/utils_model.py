@@ -667,8 +667,9 @@ class Tracker():
     def epoch_tracker(self, epoch, loss_names, losses):
         for idx, loss_name in enumerate(loss_names):
             self.writer.add_scalar(loss_name, losses[idx], epoch)
-
-        self.early_stopping(epoch, losses)
+            
+        if epoch > 15:
+            self.early_stopping(epoch, losses)
 
     def early_stopping(self, epoch, losses):
         #(train_loss, train_acc, val_loss, val_acc, current_lr)

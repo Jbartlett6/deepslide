@@ -64,6 +64,8 @@ def calculate_confusion_matrix(all_labels: np.ndarray,
     cm.style.hide(axis = 'index')
     print(cm)
 
+    return cm
+
 
 class Random90Rotation:
     def __init__(self, degrees: Tuple[int] = None) -> None:
@@ -283,10 +285,11 @@ def train_helper(model: torchvision.models.resnet.ResNet,
             train_all_predicts[start:end] = train_preds.detach().cpu()
 
         print('Training confusion Matrix:')
-        calculate_confusion_matrix(all_labels=train_all_labels.numpy(),
+        cm = calculate_confusion_matrix(all_labels=train_all_labels.numpy(),
                                    all_predicts=train_all_predicts.numpy(),
                                    classes=classes,
                                    num_classes=num_classes)
+        loss_tracker.log_confusion(epoch, cm, prefix = 'Train')
         print('\n')
         
         # Store training diagnostics.
@@ -325,10 +328,11 @@ def train_helper(model: torchvision.models.resnet.ResNet,
             val_all_predicts[start:end] = val_preds.detach().cpu()
 
         print('Validation confusion Matrix:')
-        calculate_confusion_matrix(all_labels=val_all_labels.numpy(),
+        cm = calculate_confusion_matrix(all_labels=val_all_labels.numpy(),
                                    all_predicts=val_all_predicts.numpy(),
                                    classes=classes,
                                    num_classes=num_classes)
+        loss_tracker.log_confusion(epoch, cm, prefix = 'Val')
         print('\n')
 
         # Store validation diagnostics.
@@ -653,3 +657,9 @@ class Tracker():
     def epoch_tracker(self, epoch, loss_names, losses):
         for idx, loss_name in enumerate(loss_names):
             self.writer.add_scalar(loss_name, losses[idx], epoch)
+    
+    def log_confusion(self, epoch, cm, prefix = 'train'):
+        self.writer.add_scalar(f'{prefix}/true_negative', cm.iloc[0,0], epoch)
+        self.writer.add_scalar(f'{prefix}/false_negative', cm.iloc[1,0], epoch)
+        self.writer.add_scalar(f'{prefix}/true_positive', cm.iloc[1,1], epoch)
+        self.writer.add_scalar(f'{prefix}/false_positive', cm.iloc[0,1], epoch)

@@ -21,6 +21,8 @@ from PIL import Image
 from torch.optim import lr_scheduler
 from torchvision import (datasets, transforms)
 from torch.utils.tensorboard import SummaryWriter
+import sys
+import math
 
 
 from utils import (get_image_paths, get_subfolder_paths)
@@ -251,7 +253,7 @@ def train_helper(model: torchvision.models.resnet.ResNet,
 
     # Train for specified number of epochs.
     for epoch in range(start_epoch, num_epochs):
-
+        epoch_start = time.time()
         # Training phase.
         model.train(mode=True)
 
@@ -375,7 +377,8 @@ def train_helper(model: torchvision.models.resnet.ResNet,
               f"t_acc: {train_acc:.4f} "
               f"v_loss: {val_loss:.4f} "
               f"v_acc: {val_acc:.4f}\n")
-        loss_tracker.epoch_tracker(epoch, ('Loss/t_loss', 'Loss/t_acc', 'Loss/v_loss', 'Loss/v_acc', 'Learning_rate'), (train_loss, train_acc, val_loss, val_acc, current_lr))
+        epoch_time = time.time() - epoch_start
+        loss_tracker.epoch_tracker(epoch, ('Loss/t_loss', 'Loss/t_acc', 'Loss/v_loss', 'Loss/v_acc', 'Learning_rate', 'Timing/Epoch'), (train_loss, train_acc, val_loss, val_acc, current_lr, epoch_time))
     # Print training information at the end.
     print(f"\ntraining complete in "
           f"{(time.time() - since) // 60:.2f} minutes")
@@ -654,9 +657,40 @@ class Tracker():
         self.iter_counter = 0
         self.writer = SummaryWriter()
 
+        self.early_stopping_limit = 2
+        self.best_val_loss = math.inf
+        self.best_val_acc = 0
+        self.best_val_loss_epoch = 0
+        self.best_val_acc_epoch = 0
+
+
     def epoch_tracker(self, epoch, loss_names, losses):
         for idx, loss_name in enumerate(loss_names):
             self.writer.add_scalar(loss_name, losses[idx], epoch)
+
+        self.early_stopping(epoch, losses)
+
+    def early_stopping(self, epoch, losses):
+        #(train_loss, train_acc, val_loss, val_acc, current_lr)
+        if losses[2]<self.best_val_loss: 
+            self.best_val_loss = losses[2]
+            self.best_val_loss_epoch = epoch
+
+        if losses[3]>self.best_val_acc: 
+            self.best_val_acc = losses[3]
+            self.best_val_acc_epoch = epoch
+
+        self.writer.add_scalar('EarlyStopping/Best Validation Loss', self.best_val_loss, epoch)
+        self.writer.add_scalar('EarlyStopping/Best Validation Accuracy', self.best_val_acc, epoch)
+        self.writer.add_scalar('EarlyStopping/Epochs since Val Loss Improvement', epoch - self.best_val_loss_epoch, epoch)
+        self.writer.add_scalar('EarlyStopping/Epochs since Val Accuracy Improvement', epoch - self.best_val_acc_epoch, epoch)
+
+        loss_condition = (epoch - self.best_val_loss_epoch) > self.early_stopping_limit
+        acc_condition = (epoch - self.best_val_acc_epoch) > self.early_stopping_limit
+        
+        if loss_condition and acc_condition:
+            print('Training finished due to early stopping.')
+            sys.exit()
     
     def log_confusion(self, epoch, cm, prefix = 'train'):
         self.writer.add_scalar(f'{prefix}/true_negative', cm.iloc[0,0], epoch)

@@ -371,7 +371,7 @@ def train_helper(model: torchvision.models.resnet.ResNet,
               f"t_acc: {train_acc:.4f} "
               f"v_loss: {val_loss:.4f} "
               f"v_acc: {val_acc:.4f}\n")
-        loss_tracker.epoch_tracker(epoch, ('Loss/t_loss', 'Loss/t_acc', 'Loss/v_loss', 'Loss/v_acc'), (train_loss, train_acc, val_loss, val_acc))
+        loss_tracker.epoch_tracker(epoch, ('Loss/t_loss', 'Loss/t_acc', 'Loss/v_loss', 'Loss/v_acc', 'Learning_rate'), (train_loss, train_acc, val_loss, val_acc, current_lr))
     # Print training information at the end.
     print(f"\ntraining complete in "
           f"{(time.time() - since) // 60:.2f} minutes")

@@ -56,7 +56,6 @@ if __name__ == '__main__':
     
     origin_dir = '/data/gpfs/projects/punim2070/data_jpg/OAC Slides JPEG Export_downsampled10'
     mode = 'bin'
-    print('hello')
     print(os.path.exists(target_dir), '\n', os.path.exists(csv_path), '\n', os.path.exists(origin_dir), '\n')
 
     class_dict = construct_class_dict(csv_path, mode)

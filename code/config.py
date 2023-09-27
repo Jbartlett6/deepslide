@@ -224,7 +224,7 @@ parser.add_argument(
 # Model hyperparameters.
 parser.add_argument("--num_epochs",
                     type=int,
-                    default=20,
+                    default=100,
                     help="Number of epochs for training")
 # Choose from [18, 34, 50, 101, 152].
 parser.add_argument(
@@ -239,7 +239,7 @@ parser.add_argument("--learning_rate",
                     help="Learning rate to use for gradient descent")
 parser.add_argument("--batch_size",
                     type=int,
-                    default=16,
+                    default=32,
                     help="Mini-batch size to use for training")
 parser.add_argument("--weight_decay",
                     type=float,
@@ -247,7 +247,7 @@ parser.add_argument("--weight_decay",
                     help="Weight decay (L2 penalty) to use in optimizer")
 parser.add_argument("--learning_rate_decay",
                     type=float,
-                    default=0.85,
+                    default=0.9,
                     help="Learning rate decay amount per epoch")
 parser.add_argument("--resume_checkpoint",
                     type=bool,

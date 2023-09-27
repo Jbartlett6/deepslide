@@ -20,9 +20,10 @@ import torchvision
 from PIL import Image
 from torch.optim import lr_scheduler
 from torchvision import (datasets, transforms)
+from torch.utils.tensorboard import SummaryWriter
+
 
 from utils import (get_image_paths, get_subfolder_paths)
-
 ###########################################
 #             MISC FUNCTIONS              #
 ###########################################
@@ -230,6 +231,8 @@ def train_helper(model: torchvision.models.resnet.ResNet,
         classes: Names of the classes in the dataset.
         num_classes: Number of classes in the dataset.
     """
+    #Initialising loss tracker JB
+    loss_tracker = Tracker()
     since = time.time()
 
     # Initialize all the tensors to be used in training and validation.
@@ -368,7 +371,7 @@ def train_helper(model: torchvision.models.resnet.ResNet,
               f"t_acc: {train_acc:.4f} "
               f"v_loss: {val_loss:.4f} "
               f"v_acc: {val_acc:.4f}\n")
-
+        loss_tracker.epoch_tracker(epoch, ('Loss/t_loss', 'Loss/t_acc', 'Loss/v_loss', 'Loss/v_acc'), (train_loss, train_acc, val_loss, val_acc))
     # Print training information at the end.
     print(f"\ntraining complete in "
           f"{(time.time() - since) // 60:.2f} minutes")
@@ -641,3 +644,12 @@ def get_predictions(patches_eval_folder: Path, output_folder: Path,
                     )
 
     print(f"time for {patches_eval_folder}: {time.time() - start:.2f} seconds")
+
+class Tracker():
+    def __init__(self):
+        self.iter_counter = 0
+        self.writer = SummaryWriter()
+
+    def epoch_tracker(self, epoch, loss_names, losses):
+        for idx, loss_name in enumerate(loss_names):
+            self.writer.add_scalar(loss_name, losses[idx], epoch)

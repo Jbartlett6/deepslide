@@ -657,7 +657,7 @@ class Tracker():
         self.iter_counter = 0
         self.writer = SummaryWriter()
 
-        self.early_stopping_limit = 10
+        self.early_stopping_limit = 15
         self.best_val_loss = math.inf
         self.best_val_acc = 0
         self.best_val_loss_epoch = 0
@@ -667,7 +667,7 @@ class Tracker():
     def epoch_tracker(self, epoch, loss_names, losses):
         for idx, loss_name in enumerate(loss_names):
             self.writer.add_scalar(loss_name, losses[idx], epoch)
-            
+
         if epoch > 15:
             self.early_stopping(epoch, losses)
 

@@ -11,3 +11,4 @@ __pycache__*
 log_*.csv
 OES_tools/Slide Scanning Log.xlsx - Labelling.csv
 OES_tools/2023-09-28_initialconfig.txt
+events.out*

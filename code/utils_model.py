@@ -377,6 +377,7 @@ def train_helper(model: torchvision.models.resnet.ResNet,
               f"t_acc: {train_acc:.4f} "
               f"v_loss: {val_loss:.4f} "
               f"v_acc: {val_acc:.4f}\n")
+        loss_tracker.maximum_loss_examples(val_inputs, val_outputs, val_labels, epoch)
         epoch_time = time.time() - epoch_start
         loss_tracker.epoch_tracker(epoch, ('Loss/t_loss', 'Loss/t_acc', 'Loss/v_loss', 'Loss/v_acc', 'Learning_rate', 'Timing/Epoch'), (train_loss, train_acc, val_loss, val_acc, current_lr, epoch_time))
     # Print training information at the end.
@@ -440,7 +441,7 @@ def train_resnet(
     dataloaders = {
         x: torch.utils.data.DataLoader(dataset=image_datasets[x],
                                        batch_size=batch_size,
-                                       shuffle=(x is "train"),
+                                       shuffle=True,
                                        num_workers=num_workers)
         for x in ("train", "val")
     }
@@ -698,3 +699,18 @@ class Tracker():
         self.writer.add_scalar(f'{prefix}/false_negative', cm.iloc[1,0], epoch)
         self.writer.add_scalar(f'{prefix}/true_positive', cm.iloc[1,1], epoch)
         self.writer.add_scalar(f'{prefix}/false_positive', cm.iloc[0,1], epoch)
+
+    def maximum_loss_examples(self, val_inputs, val_outputs, val_labels, epoch):
+
+        losses = nn.functional.cross_entropy(input=val_outputs, target=val_labels, reduction = 'none')
+        _, indices = torch.sort(losses)
+        ordered_input = val_inputs[indices, : ,:,:]
+
+        self.writer.add_image('BiggestErrors/1st', ordered_input[0,:,:,:], global_step = epoch, dataformats='CHW')
+        self.writer.add_image('BiggestErrors/2nd', ordered_input[1,:,:,:], global_step = epoch, dataformats='CHW')
+        self.writer.add_image('BiggestErrors/3rd', ordered_input[2,:,:,:], global_step = epoch, dataformats='CHW')
+
+        self.writer.add_image('SmallestErrors/1st', ordered_input[-1,:,:,:], global_step = epoch, dataformats='CHW')
+        self.writer.add_image('SmallestErrors/2nd', ordered_input[-2,:,:,:], global_step = epoch, dataformats='CHW')
+        self.writer.add_image('SmallestErrors/3rd', ordered_input[-3,:,:,:], global_step = epoch, dataformats='CHW')
+        

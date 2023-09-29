@@ -279,6 +279,11 @@ parser.add_argument("--log_folder",
                     default=Path("logs"),
                     help="Directory to save logs to")
 
+parser.add_argument("--normalise",
+                    type=bool,
+                    default=True,
+                    help="Normalise the input data")
+
 ##########################################
 #               PREDICTION               #
 ##########################################
@@ -365,10 +370,12 @@ train_patches = args.train_folder.joinpath("train")
 val_patches = args.train_folder.joinpath("val")
 
 # Compute the mean and standard deviation of the image patches from the specified folder.
-path_mean, path_std = compute_stats(folderpath=train_patches,
+if args.normalise:
+    path_mean, path_std = compute_stats(folderpath=train_patches,
                                     image_ext=args.image_ext)
-# path_mean = [0,0,0]
-# path_std = [1,1,1]
+else:
+    path_mean = [0,0,0]
+    path_std = [1,1,1]
 
 # Only used is resume_checkpoint is True.
 resume_checkpoint_path = args.checkpoints_folder.joinpath(args.checkpoint_file)

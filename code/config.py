@@ -367,6 +367,8 @@ val_patches = args.train_folder.joinpath("val")
 # Compute the mean and standard deviation of the image patches from the specified folder.
 path_mean, path_std = compute_stats(folderpath=train_patches,
                                     image_ext=args.image_ext)
+# path_mean = [0,0,0]
+# path_std = [1,1,1]
 
 # Only used is resume_checkpoint is True.
 resume_checkpoint_path = args.checkpoints_folder.joinpath(args.checkpoint_file)

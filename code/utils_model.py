@@ -23,6 +23,7 @@ from torchvision import (datasets, transforms)
 from torch.utils.tensorboard import SummaryWriter
 import sys
 import math
+import ShuffleNet
 
 
 from utils import (get_image_paths, get_subfolder_paths)
@@ -105,17 +106,18 @@ def create_model(num_layers: int, num_classes: int,
     Returns:
         The instantiated ResNet model with the requested parameters.
     """
-    assert num_layers in (
-        18, 34, 50, 101, 152
-    ), f"Invalid number of ResNet Layers. Must be one of [18, 34, 50, 101, 152] and not {num_layers}"
-    model_constructor = getattr(torchvision.models, f"resnet{num_layers}")
-    model = model_constructor(num_classes=num_classes)
+    # assert num_layers in (
+    #     18, 34, 50, 101, 152
+    # ), f"Invalid number of ResNet Layers. Must be one of [18, 34, 50, 101, 152] and not {num_layers}"
+    # model_constructor = getattr(torchvision.models, f"resnet{num_layers}")
+    # model = model_constructor(num_classes=num_classes)
 
-    if pretrain:
-        pretrained = model_constructor(pretrained=True).state_dict()
-        if num_classes != pretrained["fc.weight"].size(0):
-            del pretrained["fc.weight"], pretrained["fc.bias"]
-        model.load_state_dict(state_dict=pretrained, strict=False)
+    # if pretrain:
+    #     pretrained = model_constructor(pretrained=True).state_dict()
+    #     if num_classes != pretrained["fc.weight"].size(0):
+    #         del pretrained["fc.weight"], pretrained["fc.bias"]
+    #     model.load_state_dict(state_dict=pretrained, strict=False)
+    model = ShuffleNet.ShuffleNet()
     return model
 
 
@@ -377,7 +379,7 @@ def train_helper(model: torchvision.models.resnet.ResNet,
               f"t_acc: {train_acc:.4f} "
               f"v_loss: {val_loss:.4f} "
               f"v_acc: {val_acc:.4f}\n")
-        loss_tracker.maximum_loss_examples(val_inputs, val_outputs, val_labels, epoch)
+        loss_tracker.maximum_loss_examples(val_inputs, val_outputs, val_labels, val_preds, epoch)
         epoch_time = time.time() - epoch_start
         loss_tracker.epoch_tracker(epoch, ('Loss/t_loss', 'Loss/t_acc', 'Loss/v_loss', 'Loss/v_acc', 'Learning_rate', 'Timing/Epoch'), (train_loss, train_acc, val_loss, val_acc, current_lr, epoch_time))
     # Print training information at the end.
@@ -700,17 +702,21 @@ class Tracker():
         self.writer.add_scalar(f'{prefix}/true_positive', cm.iloc[1,1], epoch)
         self.writer.add_scalar(f'{prefix}/false_positive', cm.iloc[0,1], epoch)
 
-    def maximum_loss_examples(self, val_inputs, val_outputs, val_labels, epoch):
+    def maximum_loss_examples(self, val_inputs, val_outputs, val_labels, val_preds, epoch):
 
         losses = nn.functional.cross_entropy(input=val_outputs, target=val_labels, reduction = 'none')
         _, indices = torch.sort(losses)
         ordered_input = val_inputs[indices, : ,:,:]
+        ordered_labels, ordered_preds = val_labels[indices], val_preds[indices]
 
-        self.writer.add_image('BiggestErrors/1st', ordered_input[0,:,:,:], global_step = epoch, dataformats='CHW')
-        self.writer.add_image('BiggestErrors/2nd', ordered_input[1,:,:,:], global_step = epoch, dataformats='CHW')
-        self.writer.add_image('BiggestErrors/3rd', ordered_input[2,:,:,:], global_step = epoch, dataformats='CHW')
+        self.writer.add_image('Errors/1stLarge', ordered_input[0,:,:,:], global_step = epoch, dataformats='CHW')
+        self.writer.add_image('Errors/2ndLarge', ordered_input[1,:,:,:], global_step = epoch, dataformats='CHW')
+        self.writer.add_image('Errors/3rdLarge', ordered_input[2,:,:,:], global_step = epoch, dataformats='CHW')
 
-        self.writer.add_image('SmallestErrors/1st', ordered_input[-1,:,:,:], global_step = epoch, dataformats='CHW')
-        self.writer.add_image('SmallestErrors/2nd', ordered_input[-2,:,:,:], global_step = epoch, dataformats='CHW')
-        self.writer.add_image('SmallestErrors/3rd', ordered_input[-3,:,:,:], global_step = epoch, dataformats='CHW')
+        self.writer.add_image('Errors/1stSmall', ordered_input[-1,:,:,:], global_step = epoch, dataformats='CHW')
+        self.writer.add_image('Errors/2ndSmall', ordered_input[-2,:,:,:], global_step = epoch, dataformats='CHW')
+        self.writer.add_image('Errors/3rdSmall', ordered_input[-3,:,:,:], global_step = epoch, dataformats='CHW')
+
+        self.writer.add_text('Errors/labels', str(ordered_labels), global_step=epoch)
+        self.writer.add_text('Errors/preds', str(ordered_preds), global_step=epoch)
         

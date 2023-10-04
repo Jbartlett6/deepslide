@@ -24,6 +24,9 @@ from torch.utils.tensorboard import SummaryWriter
 import sys
 import math
 import ShuffleNet
+import config
+from utils import (get_classes, get_log_csv_name)
+from compute_stats import compute_stats
 
 
 from utils import (get_image_paths, get_subfolder_paths)
@@ -215,7 +218,7 @@ def train_helper(model: torchvision.models.resnet.ResNet,
                  writer: IO, device: torch.device, start_epoch: int,
                  batch_size: int, save_interval: int, checkpoints_folder: Path,
                  num_layers: int, classes: List[str],
-                 num_classes: int) -> None:
+                 num_classes: int, path_mean: List[float], path_std: List[float]) -> None:
     """
     Function for training ResNet.
 
@@ -239,6 +242,7 @@ def train_helper(model: torchvision.models.resnet.ResNet,
     """
     #Initialising loss tracker JB
     loss_tracker = Tracker()
+    loss_tracker.log_config_file(config.args)
     since = time.time()
 
     # Initialize all the tensors to be used in training and validation.
@@ -379,7 +383,7 @@ def train_helper(model: torchvision.models.resnet.ResNet,
               f"t_acc: {train_acc:.4f} "
               f"v_loss: {val_loss:.4f} "
               f"v_acc: {val_acc:.4f}\n")
-        loss_tracker.maximum_loss_examples(val_inputs, val_outputs, val_labels, val_preds, epoch)
+        loss_tracker.maximum_loss_examples(val_inputs, val_outputs, val_labels, val_preds, epoch, path_mean, path_std)
         epoch_time = time.time() - epoch_start
         loss_tracker.epoch_tracker(epoch, ('Loss/t_loss', 'Loss/t_acc', 'Loss/v_loss', 'Loss/v_acc', 'Learning_rate', 'Timing/Epoch'), (train_loss, train_acc, val_loss, val_acc, current_lr, epoch_time))
     # Print training information at the end.
@@ -512,7 +516,9 @@ def train_resnet(
                      save_interval=save_interval,
                      num_epochs=num_epochs,
                      classes=classes,
-                     num_classes=num_classes)
+                     num_classes=num_classes,
+                     path_mean=path_mean,
+                     path_std=path_std)
 
 
 ###########################################
@@ -702,21 +708,88 @@ class Tracker():
         self.writer.add_scalar(f'{prefix}/true_positive', cm.iloc[1,1], epoch)
         self.writer.add_scalar(f'{prefix}/false_positive', cm.iloc[0,1], epoch)
 
-    def maximum_loss_examples(self, val_inputs, val_outputs, val_labels, val_preds, epoch):
+    def maximum_loss_examples(self, val_inputs, val_outputs, val_labels, val_preds, epoch, path_mean, path_std):
 
         losses = nn.functional.cross_entropy(input=val_outputs, target=val_labels, reduction = 'none')
         _, indices = torch.sort(losses)
         ordered_input = val_inputs[indices, : ,:,:]
         ordered_labels, ordered_preds = val_labels[indices], val_preds[indices]
 
-        self.writer.add_image('Errors/1stLarge', ordered_input[0,:,:,:], global_step = epoch, dataformats='CHW')
-        self.writer.add_image('Errors/2ndLarge', ordered_input[1,:,:,:], global_step = epoch, dataformats='CHW')
-        self.writer.add_image('Errors/3rdLarge', ordered_input[2,:,:,:], global_step = epoch, dataformats='CHW')
+        self.writer.add_image('NormalisedErrors/1stLarge', ordered_input[0,:,:,:], global_step = epoch, dataformats='CHW')
+        self.writer.add_image('NormalisedErrors/2ndLarge', ordered_input[1,:,:,:], global_step = epoch, dataformats='CHW')
+        self.writer.add_image('NormalisedErrors/3rdLarge', ordered_input[2,:,:,:], global_step = epoch, dataformats='CHW')
 
-        self.writer.add_image('Errors/1stSmall', ordered_input[-1,:,:,:], global_step = epoch, dataformats='CHW')
-        self.writer.add_image('Errors/2ndSmall', ordered_input[-2,:,:,:], global_step = epoch, dataformats='CHW')
-        self.writer.add_image('Errors/3rdSmall', ordered_input[-3,:,:,:], global_step = epoch, dataformats='CHW')
+        self.writer.add_image('NormalisedErrors/1stSmall', ordered_input[-1,:,:,:], global_step = epoch, dataformats='CHW')
+        self.writer.add_image('NormalisedErrors/2ndSmall', ordered_input[-2,:,:,:], global_step = epoch, dataformats='CHW')
+        self.writer.add_image('NormalisedErrors/3rdSmall', ordered_input[-3,:,:,:], global_step = epoch, dataformats='CHW')
+
+        unnorm = torchvision.transforms.Normalize(mean=-np.array(path_mean)/np.array(path_std), std=1/np.array(path_std), inplace=False)
+
+        self.writer.add_image('Errors/1stLarge', unnorm(ordered_input[0,:,:,:]), global_step = epoch, dataformats='CHW')
+        self.writer.add_image('Errors/2ndLarge', unnorm(ordered_input[1,:,:,:]), global_step = epoch, dataformats='CHW')
+        self.writer.add_image('Errors/3rdLarge', unnorm(ordered_input[2,:,:,:]), global_step = epoch, dataformats='CHW')
+
+        self.writer.add_image('Errors/1stSmall', unnorm(ordered_input[-1,:,:,:]), global_step = epoch, dataformats='CHW')
+        self.writer.add_image('Errors/2ndSmall', unnorm(ordered_input[-2,:,:,:]), global_step = epoch, dataformats='CHW')
+        self.writer.add_image('Errors/3rdSmall', unnorm(ordered_input[-3,:,:,:]), global_step = epoch, dataformats='CHW')
 
         self.writer.add_text('Errors/labels', str(ordered_labels), global_step=epoch)
         self.writer.add_text('Errors/preds', str(ordered_preds), global_step=epoch)
         
+    def log_config_file(self, args):
+        # Device to use for PyTorch code.
+        device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
+        # Automatically read in the classes.
+        classes = get_classes(folder=args.all_wsi)
+        num_classes = len(classes)
+
+        # This is the input for model training, automatically built.
+        train_patches = args.train_folder.joinpath("train")
+        val_patches = args.train_folder.joinpath("val")
+
+        # Compute the mean and standard deviation of the image patches from the specified folder.
+        # if args.normalise:
+        path_mean, path_std = compute_stats(folderpath=train_patches, image_ext=args.image_ext)
+        # else:
+        # path_mean = [0,0,0]
+        # path_std = [1,1,1]
+
+        # Only used is resume_checkpoint is True.
+        resume_checkpoint_path = args.checkpoints_folder.joinpath(args.checkpoint_file)
+
+        # Named with date and time.
+        log_csv = get_log_csv_name(log_folder=args.log_folder)
+
+        # Does nothing if auto_select is True.
+        eval_model = args.checkpoints_folder.joinpath(args.checkpoint_file)
+
+        # Find the best threshold for filtering noise (discard patches with a confidence less than this threshold).
+        threshold_search = (0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9)
+
+        # For visualization.
+        # This order is the same order as your sorted classes.
+        colors = ("red", "white", "blue", "green", "purple", "orange", "black", "pink",
+                "yellow")
+
+        # Print the configuration.
+        # Source: https://stackoverflow.com/questions/44689546/how-to-print-out-a-dictionary-nicely-in-python/44689627
+        # chr(10) and chr(9) are ways of going around the f-string limitation of
+        # not allowing the '\' character inside.
+        config_string = f"""###############     CONFIGURATION     ###############\n
+            {chr(10).join(f'{k}:{chr(9)}{v}{chr(10)}' for k, v in vars(args).items())}\n
+            device:\t{device}\n
+            classes:\t{classes}\n
+            num_classes:\t{num_classes}\n
+            train_patches:\t{train_patches}\n
+            val_patches:\t{val_patches}\n
+            path_mean:\t{path_mean}\n
+            path_std:\t{path_std}\n
+            resume_checkpoint_path:\t{resume_checkpoint_path}\n
+            log_csv:\t{log_csv}\n
+            eval_model:\t{eval_model}\n
+            threshold_search:\t{threshold_search}\n
+            colors:\t{colors}\n
+            \n#####################################################\n\n\n"""
+        
+        self.writer.add_text('Configuration/config', config_string, global_step=0)

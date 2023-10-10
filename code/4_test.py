@@ -18,7 +18,8 @@ get_predictions(patches_eval_folder=config.args.patches_eval_val,
                 num_workers=config.args.num_workers,
                 path_mean=config.path_mean,
                 path_std=config.path_std,
-                pretrain=config.args.pretrain)
+                pretrain=config.args.pretrain,
+                architecture=config.args.architecture)
 print("----- Finished finding validation patch predictions -----\n")
 print("----- Finding test patch predictions -----")
 # Test patches.
@@ -35,6 +36,7 @@ get_predictions(patches_eval_folder=config.args.patches_eval_test,
                 num_workers=config.args.num_workers,
                 path_mean=config.path_mean,
                 path_std=config.path_std,
-                pretrain=config.args.pretrain)
+                pretrain=config.args.pretrain,
+                architecture=config.args.architecture)
 print("----- Finished finding test patch predictions -----\n")
 print("+++++ Finished running 4_test.py +++++\n\n")

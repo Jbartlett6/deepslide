@@ -226,6 +226,12 @@ parser.add_argument("--num_epochs",
                     type=int,
                     default=100,
                     help="Number of epochs for training")
+
+parser.add_argument("--architecture",
+                    type = str,
+                    default="ShuffleNet",
+                    help="The network architecture which is used, currently implemented architectures are ResNet and ShuffleNet")
+
 # Choose from [18, 34, 50, 101, 152].
 parser.add_argument(
     "--num_layers",

@@ -97,7 +97,7 @@ class Random90Rotation:
 
 
 def create_model(num_layers: int, num_classes: int,
-                 pretrain: bool) -> torchvision.models.resnet.ResNet:
+                 pretrain: bool, architecture: str) -> torchvision.models.resnet.ResNet:
     """
     Instantiate the ResNet model.
 
@@ -109,18 +109,23 @@ def create_model(num_layers: int, num_classes: int,
     Returns:
         The instantiated ResNet model with the requested parameters.
     """
-    # assert num_layers in (
-    #     18, 34, 50, 101, 152
-    # ), f"Invalid number of ResNet Layers. Must be one of [18, 34, 50, 101, 152] and not {num_layers}"
-    # model_constructor = getattr(torchvision.models, f"resnet{num_layers}")
-    # model = model_constructor(num_classes=num_classes)
+    if architecture == "ResNet":
+        assert num_layers in (
+            18, 34, 50, 101, 152
+        ), f"Invalid number of ResNet Layers. Must be one of [18, 34, 50, 101, 152] and not {num_layers}"
+        model_constructor = getattr(torchvision.models, f"resnet{num_layers}")
+        model = model_constructor(num_classes=num_classes)
 
-    # if pretrain:
-    #     pretrained = model_constructor(pretrained=True).state_dict()
-    #     if num_classes != pretrained["fc.weight"].size(0):
-    #         del pretrained["fc.weight"], pretrained["fc.bias"]
-    #     model.load_state_dict(state_dict=pretrained, strict=False)
-    model = ShuffleNet.ShuffleNet()
+        if pretrain:
+            pretrained = model_constructor(pretrained=True).state_dict()
+            if num_classes != pretrained["fc.weight"].size(0):
+                del pretrained["fc.weight"], pretrained["fc.bias"]
+            model.load_state_dict(state_dict=pretrained, strict=False)
+    elif architecture == "ShuffleNet":
+        model = ShuffleNet.ShuffleNet()
+    else:
+        assert architecture in ("ResNet", "ShuffleNet"), f"Architecture ({architecture}) is not in currently implemented architectures: (\"ResNet\", \"ShuffleNet\")"
+    
     return model
 
 
@@ -400,7 +405,7 @@ def train_resnet(
         color_jitter_hue: float, color_jitter_saturation: float,
         path_mean: List[float], path_std: List[float], num_classes: int,
         num_layers: int, pretrain: bool, checkpoints_folder: Path,
-        num_epochs: int, save_interval: int) -> None:
+        num_epochs: int, save_interval: int, architecture:str) -> None:
     """
     Main function for training ResNet.
 
@@ -460,7 +465,8 @@ def train_resnet(
 
     model = create_model(num_classes=num_classes,
                          num_layers=num_layers,
-                         pretrain=pretrain)
+                         pretrain=pretrain,
+                         architecture=architecture)
     model = model.to(device=device)
     optimizer = optim.Adam(params=model.parameters(),
                            lr=learning_rate,
@@ -562,7 +568,7 @@ def get_predictions(patches_eval_folder: Path, output_folder: Path,
                     eval_model: Path, device: torch.device, classes: List[str],
                     num_classes: int, path_mean: List[float],
                     path_std: List[float], num_layers: int, pretrain: bool,
-                    batch_size: int, num_workers: int) -> None:
+                    batch_size: int, num_workers: int, architecture: str) -> None:
     """
     Main function for running the model on all of the generated patches.
 
@@ -588,7 +594,8 @@ def get_predictions(patches_eval_folder: Path, output_folder: Path,
 
     model = create_model(num_classes=num_classes,
                          num_layers=num_layers,
-                         pretrain=pretrain)
+                         pretrain=pretrain,
+                         architecture=architecture)
     ckpt = torch.load(f=model_path)
     model.load_state_dict(state_dict=ckpt["model_state_dict"])
     model = model.to(device=device)

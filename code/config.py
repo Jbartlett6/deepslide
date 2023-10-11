@@ -286,8 +286,7 @@ parser.add_argument("--log_folder",
                     help="Directory to save logs to")
 
 parser.add_argument("--disable_normalise",
-                    type=bool,
-                    default=False,
+                    action='store_true',
                     help="Normalise the input data")
 
 ##########################################

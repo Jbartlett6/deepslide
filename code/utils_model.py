@@ -160,12 +160,14 @@ def get_data_transforms(color_jitter_brightness: float,
             transforms.RandomVerticalFlip(),
             Random90Rotation(),
             transforms.ToTensor(),
-            transforms.Normalize(mean=path_mean, std=path_std)
+            transforms.Normalize(mean=path_mean, std=path_std),
+            transforms.Grayscale(num_output_channels=3)
         ]),
         "val":
         transforms.Compose(transforms=[
             transforms.ToTensor(),
-            transforms.Normalize(mean=path_mean, std=path_std)
+            transforms.Normalize(mean=path_mean, std=path_std),
+            transforms.Grayscale(num_output_channels=3)
         ])
     }
 

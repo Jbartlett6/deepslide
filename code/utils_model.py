@@ -330,6 +330,7 @@ def train_helper(model: torchvision.models.resnet.ResNet,
                 val_outputs = model(val_inputs)
                 _, val_preds = torch.max(val_outputs, dim=1)
                 val_loss = criterion(input=val_outputs, target=val_labels)
+                loss_tracker.val_process(val_outputs, val_preds, val_labels) # JB tracking validation properties
 
             # Update validation diagnostics.
             val_running_loss += val_loss.item() * val_inputs.size(0)
@@ -681,6 +682,8 @@ class Tracker():
         self.best_val_loss_epoch = 0
         self.best_val_acc_epoch = 0
 
+    # def val_process(self, val_outputs, val_preds, val_labels, val_subjects):
+        
 
     def epoch_tracker(self, epoch, loss_names, losses):
         for idx, loss_name in enumerate(loss_names):

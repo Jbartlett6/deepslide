@@ -251,7 +251,6 @@ def pil_loader(path: str) -> Image.Image:
         img = Image.open(f)
         return img.convert("RGB")
 
-
 # TODO: specify the return type
 def accimage_loader(path: str) -> Any:
     import accimage

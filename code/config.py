@@ -55,7 +55,7 @@ parser.add_argument(
 # Number of processes to use.
 parser.add_argument("--num_workers",
                     type=int,
-                    default=8,
+                    default=0,
                     help="Number of workers to use for IO")
 # Default shape for ResNet in PyTorch.
 parser.add_argument("--patch_size",

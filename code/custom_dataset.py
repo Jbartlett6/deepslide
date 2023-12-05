@@ -3,8 +3,9 @@ import os.path
 from typing import Any, Callable, cast, Dict, List, Optional, Tuple, Union
 
 from PIL import Image
-
-from .vision import VisionDataset
+import torch
+import torchvision
+# from .vision import VisionDataset
 
 
 def has_file_allowed_extension(filename: str, extensions: Union[str, Tuple[str, ...]]) -> bool:
@@ -104,7 +105,7 @@ def make_dataset(
     return instances
 
 
-class DatasetFolder(VisionDataset):
+class DatasetFolder(torchvision.datasets.VisionDataset):
     """A generic data loader.
 
     This default directory structure can be customized by overriding the

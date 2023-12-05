@@ -20,6 +20,7 @@ import torchvision
 from PIL import Image
 from torch.optim import lr_scheduler
 from torchvision import (datasets, transforms)
+import custom_dataset as datasets
 from torch.utils.tensorboard import SummaryWriter
 import sys
 import math
@@ -27,6 +28,12 @@ import ShuffleNet
 import config
 from utils import (get_classes, get_log_csv_name)
 from compute_stats import compute_stats
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+
+import ValidationTracker as VT
+
 
 
 from utils import (get_image_paths, get_subfolder_paths)
@@ -122,7 +129,7 @@ def create_model(num_layers: int, num_classes: int,
                 del pretrained["fc.weight"], pretrained["fc.bias"]
             model.load_state_dict(state_dict=pretrained, strict=False)
     elif architecture == "ShuffleNet":
-        model = ShuffleNet.ShuffleNet()
+        model = ShuffleNet.ShuffleNet(num_classes=2)
     else:
         assert architecture in ("ResNet", "ShuffleNet"), f"Architecture ({architecture}) is not in currently implemented architectures: (\"ResNet\", \"ShuffleNet\")"
     
@@ -249,6 +256,7 @@ def train_helper(model: torchvision.models.resnet.ResNet,
     """
     #Initialising loss tracker JB
     loss_tracker = Tracker()
+    vtrack = VT.ValidationTracker(loss_tracker.writer)
     loss_tracker.log_config_file(config.args)
     since = time.time()
 
@@ -274,7 +282,7 @@ def train_helper(model: torchvision.models.resnet.ResNet,
         train_running_corrects = 0
 
         # Train over all training data.
-        for idx, (inputs, labels) in enumerate(dataloaders["train"]):
+        for idx, (inputs, labels, filenames) in enumerate(dataloaders["train"]):
             train_inputs = inputs.to(device=device)
             train_labels = labels.to(device=device)
             optimizer.zero_grad()
@@ -321,7 +329,7 @@ def train_helper(model: torchvision.models.resnet.ResNet,
         val_running_corrects = 0
 
         # Feed forward over all the validation data.
-        for idx, (val_inputs, val_labels) in enumerate(dataloaders["val"]):
+        for idx, (val_inputs, val_labels, filenames) in enumerate(dataloaders["val"]):
             val_inputs = val_inputs.to(device=device)
             val_labels = val_labels.to(device=device)
 
@@ -330,8 +338,9 @@ def train_helper(model: torchvision.models.resnet.ResNet,
                 val_outputs = model(val_inputs)
                 _, val_preds = torch.max(val_outputs, dim=1)
                 val_loss = criterion(input=val_outputs, target=val_labels)
-                loss_tracker.val_process(val_outputs, val_preds, val_labels) # JB tracking validation properties
+                # loss_tracker.val_process(val_outputs, val_preds, val_labels) # JB tracking validation properties
 
+            vtrack.log(val_preds, val_labels, filenames)
             # Update validation diagnostics.
             val_running_loss += val_loss.item() * val_inputs.size(0)
             val_running_corrects += torch.sum(val_preds == val_labels.data,
@@ -343,6 +352,9 @@ def train_helper(model: torchvision.models.resnet.ResNet,
             val_all_labels[start:end] = val_labels.detach().cpu()
             val_all_predicts[start:end] = val_preds.detach().cpu()
 
+        vtrack.plot_and_save(epoch)
+        vtrack.reset()
+        
         print('Validation confusion Matrix:')
         cm = calculate_confusion_matrix(all_labels=val_all_labels.numpy(),
                                    all_predicts=val_all_predicts.numpy(),
@@ -723,30 +735,37 @@ class Tracker():
     def maximum_loss_examples(self, val_inputs, val_outputs, val_labels, val_preds, epoch, path_mean, path_std):
 
         losses = nn.functional.cross_entropy(input=val_outputs, target=val_labels, reduction = 'none')
-        _, indices = torch.sort(losses)
+        ordered_losses, indices = torch.sort(losses, descending = True)
         ordered_input = val_inputs[indices, : ,:,:]
         ordered_labels, ordered_preds = val_labels[indices], val_preds[indices]
 
-        self.writer.add_image('NormalisedErrors/1stLarge', ordered_input[0,:,:,:], global_step = epoch, dataformats='CHW')
-        self.writer.add_image('NormalisedErrors/2ndLarge', ordered_input[1,:,:,:], global_step = epoch, dataformats='CHW')
-        self.writer.add_image('NormalisedErrors/3rdLarge', ordered_input[2,:,:,:], global_step = epoch, dataformats='CHW')
+        self.writer.add_figure('NormalisedErrors/1stLarge', self.patch_plot(np.transpose(ordered_input[0,:,:,:], (2,1,0)), ordered_labels[0], ordered_preds[0], ordered_losses[0]), global_step = epoch)
+        self.writer.add_figure('NormalisedErrors/2ndLarge', self.patch_plot(np.transpose(ordered_input[1,:,:,:], (2,1,0)), ordered_labels[1], ordered_preds[1], ordered_losses[1]), global_step = epoch)
+        self.writer.add_figure('NormalisedErrors/3rdLarge', self.patch_plot(np.transpose(ordered_input[2,:,:,:], (2,1,0)), ordered_labels[2], ordered_preds[2], ordered_losses[2]), global_step = epoch)
 
-        self.writer.add_image('NormalisedErrors/1stSmall', ordered_input[-1,:,:,:], global_step = epoch, dataformats='CHW')
-        self.writer.add_image('NormalisedErrors/2ndSmall', ordered_input[-2,:,:,:], global_step = epoch, dataformats='CHW')
-        self.writer.add_image('NormalisedErrors/3rdSmall', ordered_input[-3,:,:,:], global_step = epoch, dataformats='CHW')
+        self.writer.add_figure('NormalisedErrors/1stSmallest', self.patch_plot(np.transpose(ordered_input[-1,:,:,:], (2,1,0)), ordered_labels[-1], ordered_preds[-1], ordered_losses[-1]), global_step = epoch)
+        self.writer.add_figure('NormalisedErrors/2ndSmallest', self.patch_plot(np.transpose(ordered_input[-2,:,:,:], (2,1,0)), ordered_labels[-2], ordered_preds[-2], ordered_losses[-2]), global_step = epoch)
+        self.writer.add_figure('NormalisedErrors/3rdSmallest', self.patch_plot(np.transpose(ordered_input[-3,:,:,:], (2,1,0)), ordered_labels[-3], ordered_preds[-3], ordered_losses[-3]), global_step = epoch)
 
         unnorm = torchvision.transforms.Normalize(mean=-np.array(path_mean)/np.array(path_std), std=1/np.array(path_std), inplace=False)
+        self.writer.add_figure('NormalisedErrors/1stLarge', self.patch_plot(np.transpose(unnorm(ordered_input[0,:,:,:]), (2,1,0)), ordered_labels[0], ordered_preds[0], ordered_losses[0]), global_step = epoch)
+        self.writer.add_figure('NormalisedErrors/2ndLarge', self.patch_plot(np.transpose(unnorm(ordered_input[1,:,:,:]), (2,1,0)), ordered_labels[1], ordered_preds[1], ordered_losses[1]), global_step = epoch)
+        self.writer.add_figure('NormalisedErrors/3rdLarge', self.patch_plot(np.transpose(unnorm(ordered_input[2,:,:,:]), (2,1,0)), ordered_labels[2], ordered_preds[2], ordered_losses[2]), global_step = epoch)
 
-        self.writer.add_image('Errors/1stLarge', unnorm(ordered_input[0,:,:,:]), global_step = epoch, dataformats='CHW')
-        self.writer.add_image('Errors/2ndLarge', unnorm(ordered_input[1,:,:,:]), global_step = epoch, dataformats='CHW')
-        self.writer.add_image('Errors/3rdLarge', unnorm(ordered_input[2,:,:,:]), global_step = epoch, dataformats='CHW')
-
-        self.writer.add_image('Errors/1stSmall', unnorm(ordered_input[-1,:,:,:]), global_step = epoch, dataformats='CHW')
-        self.writer.add_image('Errors/2ndSmall', unnorm(ordered_input[-2,:,:,:]), global_step = epoch, dataformats='CHW')
-        self.writer.add_image('Errors/3rdSmall', unnorm(ordered_input[-3,:,:,:]), global_step = epoch, dataformats='CHW')
+        self.writer.add_figure('NormalisedErrors/1stSmallest', self.patch_plot(np.transpose(unnorm(ordered_input[-1,:,:,:]), (2,1,0)), ordered_labels[-1], ordered_preds[-1], ordered_losses[-1]), global_step = epoch)
+        self.writer.add_figure('NormalisedErrors/2ndSmallest', self.patch_plot(np.transpose(unnorm(ordered_input[-2,:,:,:]), (2,1,0)), ordered_labels[-2], ordered_preds[-2], ordered_losses[-2]), global_step = epoch)
+        self.writer.add_figure('NormalisedErrors/3rdSmallest', self.patch_plot(np.transpose(unnorm(ordered_input[-3,:,:,:]), (2,1,0)), ordered_labels[-3], ordered_preds[-3], ordered_losses[-3]), global_step = epoch)
 
         self.writer.add_text('Errors/labels', str(ordered_labels), global_step=epoch)
         self.writer.add_text('Errors/preds', str(ordered_preds), global_step=epoch)
+    
+    @staticmethod
+    def patch_plot(image, true_label, predicted_label, output):
+        fig, ax = plt.subplots(1,1)
+        ax.imshow(image)
+        ax.set_title(f'True label: {true_label}, Predicted label: {predicted_label}, logit: {output}')
+        return fig
+
         
     def log_config_file(self, args):
         # Device to use for PyTorch code.
@@ -805,3 +824,5 @@ class Tracker():
             \n#####################################################\n\n\n"""
         
         self.writer.add_text('Configuration/config', config_string, global_step=0)
+
+

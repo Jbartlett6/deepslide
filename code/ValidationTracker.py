@@ -7,7 +7,7 @@ class ValidationTracker():
         self.writer = writer
 
     def log(self, predictions, labels, filenames):
-        
+
         subjects = [fn.split('/')[-1].split('_')[0]for fn in filenames]
         results = predictions == labels
         for subject, r in zip(subjects, results):
@@ -31,5 +31,5 @@ class ValidationTracker():
         accuracies = [score/total for score, total in zip(self.scores.values(),self.total.values())]
         fig, ax = plt.subplots(1,1)
         ax.bar(self.scores.keys(), accuracies)
-        self.writer.add_figure('val/subject_error', fig, global_step = epoch)
+        self.writer.add_figure('Val/Subject Accuracies', fig, global_step = epoch)
 

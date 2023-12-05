@@ -739,22 +739,22 @@ class Tracker():
         ordered_input = val_inputs[indices, : ,:,:]
         ordered_labels, ordered_preds = val_labels[indices], val_preds[indices]
 
-        self.writer.add_figure('NormalisedErrors/1stLarge', self.patch_plot(np.transpose(ordered_input[0,:,:,:], (2,1,0)), ordered_labels[0], ordered_preds[0], ordered_losses[0]), global_step = epoch)
-        self.writer.add_figure('NormalisedErrors/2ndLarge', self.patch_plot(np.transpose(ordered_input[1,:,:,:], (2,1,0)), ordered_labels[1], ordered_preds[1], ordered_losses[1]), global_step = epoch)
-        self.writer.add_figure('NormalisedErrors/3rdLarge', self.patch_plot(np.transpose(ordered_input[2,:,:,:], (2,1,0)), ordered_labels[2], ordered_preds[2], ordered_losses[2]), global_step = epoch)
+        self.writer.add_figure('NormalisedErrors/1stLarge', self.patch_plot(np.transpose(ordered_input[0,:,:,:].cpu(), (2,1,0)), ordered_labels[0], ordered_preds[0], ordered_losses[0]), global_step = epoch)
+        self.writer.add_figure('NormalisedErrors/2ndLarge', self.patch_plot(np.transpose(ordered_input[1,:,:,:].cpu(), (2,1,0)), ordered_labels[1], ordered_preds[1], ordered_losses[1]), global_step = epoch)
+        self.writer.add_figure('NormalisedErrors/3rdLarge', self.patch_plot(np.transpose(ordered_input[2,:,:,:].cpu(), (2,1,0)), ordered_labels[2], ordered_preds[2], ordered_losses[2]), global_step = epoch)
 
-        self.writer.add_figure('NormalisedErrors/1stSmallest', self.patch_plot(np.transpose(ordered_input[-1,:,:,:], (2,1,0)), ordered_labels[-1], ordered_preds[-1], ordered_losses[-1]), global_step = epoch)
-        self.writer.add_figure('NormalisedErrors/2ndSmallest', self.patch_plot(np.transpose(ordered_input[-2,:,:,:], (2,1,0)), ordered_labels[-2], ordered_preds[-2], ordered_losses[-2]), global_step = epoch)
-        self.writer.add_figure('NormalisedErrors/3rdSmallest', self.patch_plot(np.transpose(ordered_input[-3,:,:,:], (2,1,0)), ordered_labels[-3], ordered_preds[-3], ordered_losses[-3]), global_step = epoch)
+        self.writer.add_figure('NormalisedErrors/1stSmallest', self.patch_plot(np.transpose(ordered_input[-1,:,:,:].cpu(), (2,1,0)), ordered_labels[-1], ordered_preds[-1], ordered_losses[-1]), global_step = epoch)
+        self.writer.add_figure('NormalisedErrors/2ndSmallest', self.patch_plot(np.transpose(ordered_input[-2,:,:,:].cpu(), (2,1,0)), ordered_labels[-2], ordered_preds[-2], ordered_losses[-2]), global_step = epoch)
+        self.writer.add_figure('NormalisedErrors/3rdSmallest', self.patch_plot(np.transpose(ordered_input[-3,:,:,:].cpu(), (2,1,0)), ordered_labels[-3], ordered_preds[-3], ordered_losses[-3]), global_step = epoch)
 
         unnorm = torchvision.transforms.Normalize(mean=-np.array(path_mean)/np.array(path_std), std=1/np.array(path_std), inplace=False)
-        self.writer.add_figure('NormalisedErrors/1stLarge', self.patch_plot(np.transpose(unnorm(ordered_input[0,:,:,:]), (2,1,0)), ordered_labels[0], ordered_preds[0], ordered_losses[0]), global_step = epoch)
-        self.writer.add_figure('NormalisedErrors/2ndLarge', self.patch_plot(np.transpose(unnorm(ordered_input[1,:,:,:]), (2,1,0)), ordered_labels[1], ordered_preds[1], ordered_losses[1]), global_step = epoch)
-        self.writer.add_figure('NormalisedErrors/3rdLarge', self.patch_plot(np.transpose(unnorm(ordered_input[2,:,:,:]), (2,1,0)), ordered_labels[2], ordered_preds[2], ordered_losses[2]), global_step = epoch)
+        self.writer.add_figure('NormalisedErrors/1stLarge', self.patch_plot(np.transpose(unnorm(ordered_input[0,:,:,:].cpu()), (2,1,0)), ordered_labels[0], ordered_preds[0], ordered_losses[0]), global_step = epoch)
+        self.writer.add_figure('NormalisedErrors/2ndLarge', self.patch_plot(np.transpose(unnorm(ordered_input[1,:,:,:].cpu()), (2,1,0)), ordered_labels[1], ordered_preds[1], ordered_losses[1]), global_step = epoch)
+        self.writer.add_figure('NormalisedErrors/3rdLarge', self.patch_plot(np.transpose(unnorm(ordered_input[2,:,:,:].cpu()), (2,1,0)), ordered_labels[2], ordered_preds[2], ordered_losses[2]), global_step = epoch)
 
-        self.writer.add_figure('NormalisedErrors/1stSmallest', self.patch_plot(np.transpose(unnorm(ordered_input[-1,:,:,:]), (2,1,0)), ordered_labels[-1], ordered_preds[-1], ordered_losses[-1]), global_step = epoch)
-        self.writer.add_figure('NormalisedErrors/2ndSmallest', self.patch_plot(np.transpose(unnorm(ordered_input[-2,:,:,:]), (2,1,0)), ordered_labels[-2], ordered_preds[-2], ordered_losses[-2]), global_step = epoch)
-        self.writer.add_figure('NormalisedErrors/3rdSmallest', self.patch_plot(np.transpose(unnorm(ordered_input[-3,:,:,:]), (2,1,0)), ordered_labels[-3], ordered_preds[-3], ordered_losses[-3]), global_step = epoch)
+        self.writer.add_figure('NormalisedErrors/1stSmallest', self.patch_plot(np.transpose(unnorm(ordered_input[-1,:,:,:].cpu()), (2,1,0)), ordered_labels[-1], ordered_preds[-1], ordered_losses[-1]), global_step = epoch)
+        self.writer.add_figure('NormalisedErrors/2ndSmallest', self.patch_plot(np.transpose(unnorm(ordered_input[-2,:,:,:].cpu()), (2,1,0)), ordered_labels[-2], ordered_preds[-2], ordered_losses[-2]), global_step = epoch)
+        self.writer.add_figure('NormalisedErrors/3rdSmallest', self.patch_plot(np.transpose(unnorm(ordered_input[-3,:,:,:].cpu()), (2,1,0)), ordered_labels[-3], ordered_preds[-3], ordered_losses[-3]), global_step = epoch)
 
         self.writer.add_text('Errors/labels', str(ordered_labels), global_step=epoch)
         self.writer.add_text('Errors/preds', str(ordered_preds), global_step=epoch)

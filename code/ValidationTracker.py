@@ -28,12 +28,16 @@ class ValidationTracker():
         self.total = {}
         
     def plot_and_save(self, epoch):
-        accuracies = [score/total for score, total in zip(self.scores.values(),self.total.values())]
+        subs = self.scores.keys()
+        accuracies = [self.scores[sub]/self.total[sub] for sub in subs]
+        ordered_scores = [self.scores[sub] for sub in subs]
+        ordered_totals = [self.total[sub] for sub in subs]
+        
         fig, ax = plt.subplots(1,3)
 
         ax[0].bar(self.scores.keys(), accuracies)
-        ax[1].bar(self.scores.keys(), list(self.scores.values()))
-        ax[2].bar(self.scores.keys(), list(self.total.values()))
+        ax[1].bar(self.scores.keys(), ordered_scores)
+        ax[2].bar(self.scores.keys(), ordered_totals)
 
         self.writer.add_figure('Val/Subject Accuracies', fig, global_step = epoch)
 

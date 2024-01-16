@@ -47,16 +47,15 @@ def sort_subjects(class_dict, origin_dir, target_dir):
                 shutil.copyfile(file, os.path.join(target_dir, class_name, file.split('/')[-1]))
 
 if __name__ == '__main__':
-    deepslide_dir = '/data/gpfs/projects/punim2070/code/deepslide/deepslide'
-    csv_path = os.path.join(deepslide_dir, 'OES_tools', 'Slide Scanning Log.xlsx - Labelling.csv')
-    target_dir = os.path.join(deepslide_dir, 'all_wsi_including_3')
+    # deepslide_dir = '/data/gpfs/projects/punim2070/code/deepslide/deepslide'
+    csv_path = "D:\\deepslide_data\\Slide Scanning Log.xlsx - Labelling.csv"
+    target_dir = "D:\\deepslide_data\\all_wsi (base)"
+    origin_dir = "D:\\deepslide_data\\OAC Slides JPEG Export_downsampled10"
+    mode = 'bin'
 
     assert os.path.exists(target_dir) == False, 'Target directory already exists, either delete current directory or change target directory'
     
     os.mkdir(target_dir)
-
-    origin_dir = '/data/gpfs/projects/punim2070/data_jpg/OAC Slides JPEG Export_downsampled10'
-    mode = 'bin'
 
     class_dict = construct_class_dict(csv_path, mode)
     make_directories(class_dict, target_dir)

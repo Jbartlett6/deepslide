@@ -1,11 +1,13 @@
 import os
 import os.path
 from typing import Any, Callable, cast, Dict, List, Optional, Tuple, Union
+import time
 
 from PIL import Image
 import torch
 import torchvision
 # from .vision import VisionDataset
+
 
 
 def has_file_allowed_extension(filename: str, extensions: Union[str, Tuple[str, ...]]) -> bool:
@@ -318,3 +320,39 @@ class ImageFolder(DatasetFolder):
             is_valid_file=is_valid_file,
         )
         self.imgs = self.samples
+
+def dataset_time(dataset):
+    '''
+    Function to check how long it takes to cycle through a dataset (for test purposes).
+    '''
+    start_time = time.time()
+    for i in range(len(dataset)):
+        if i % 1000==0:
+            print(i)
+            print(time.time() - start_time)
+        
+        dataset.__getitem__(i)
+    
+def get_dataset_idx(dataset, val_subs):
+    '''
+    Finds the ids of the training and validation subjects in the dataset - these ids
+    can then be used in pytorch's subset function. 
+    '''
+    train_idxs = []
+    val_idxs = []
+
+    for idx in range(len(dataset)):
+        if subject_from_path(dataset.__getitem__(idx)[-1]) in val_subs:
+            val_idxs.append(idx)
+        else:
+            train_idxs.append(idx)
+    
+    return train_idxs, val_idxs
+
+def subject_from_path(path):
+    '''
+    Obtain the subject in string form from a path as ouput by the dataset.
+    '''
+    return path.split('/')[-1].split('_')[0]
+
+

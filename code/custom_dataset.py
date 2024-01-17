@@ -2,6 +2,7 @@ import os
 import os.path
 from typing import Any, Callable, cast, Dict, List, Optional, Tuple, Union
 import time
+import random
 
 from PIL import Image
 import torch
@@ -355,4 +356,51 @@ def subject_from_path(path):
     '''
     return path.split('/')[-1].split('_')[0]
 
+class SubsetTransform(torch.utils.data.Dataset):
+    def __init__(self, subset, transform=None):
+        self.subset = subset
+        self.transform = transform
+        
+    def __getitem__(self, index):
+        inputs, labels, filenames = self.subset[index]
+        if self.transform:
+            inputs = self.transform(inputs)
+        return inputs, labels, filenames
+        
+    def __len__(self):
+        return len(self.subset)
 
+def create_image_datasets(data_transforms, val_subjects=None):
+    '''
+    Function to create a training and validation datasets from one master dataset containing all patches. 
+    the indices can be specified or 
+    '''
+    image_dataset = ImageFolder(root='/mnt/d/deepslide_data/Train_Folders/train_macenko_siewert_tumour_ALL')
+
+    if val_subjects == None:
+        all_true_subjects = ['318', '352', '151', '194', '121', '21', '48', '261', '125', '159', '162']
+        all_false_subjects = ['118', '146', '119', '213', '62', '27', '294', '128', '6', '124', '206', '193', '136', '20', '5', '163', '111', '202', '153']
+        sample_true_subjects = random.sample(all_true_subjects, k=2)
+        sample_false_subjects = random.sample(all_false_subjects, k=2)
+        val_subjects = sample_true_subjects + sample_false_subjects
+
+    print(f'The vaidation set contains subjects {val_subjects}')
+
+    train_idxs, val_idxs = get_dataset_idx(image_dataset, val_subjects)
+
+    image_subsets = {'train': torch.utils.data.Subset(image_dataset, train_idxs),
+                     'val': torch.utils.data.Subset(image_dataset, val_idxs)}
+
+    image_datasets = {'train': SubsetTransform(image_subsets['train'], transform = data_transforms['train']),
+                      'val': SubsetTransform(image_subsets['val'], transform = data_transforms['val'])}
+
+    return image_datasets
+
+
+# Defining the whole dataset
+
+# Calculating the training and validation idxs
+
+# Subsetting the training dataset according to training and validation idxs
+
+# Creating dataloaders from subset datasets

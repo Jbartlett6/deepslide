@@ -61,7 +61,7 @@ for i, val_set in enumerate(val_subs):
                 architecture=config.args.architecture,
                 val_subjects=val_set,
                 early_stopping=True,
-                early_stopping_threshold=2)
+                early_stopping_threshold=config.args.early_stopping_threshold)
     
     with open(kfold_log, 'a') as log:
         log.write(f'{train_output}\n')

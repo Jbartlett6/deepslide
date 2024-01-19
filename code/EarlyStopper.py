@@ -7,7 +7,7 @@ class EarlyStopper():
     before early stopping takes place. When the EarlyStopper has been updated 
     more than threshold number of times without improvement the indicator
     attribute changes from False to True. At this point training should stop. 
-    the indicator must be checked in the training loop.
+    the indicator must be checked in the training loop..
     '''
     def __init__(self, threshold):
         self.threshold = threshold

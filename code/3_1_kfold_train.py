@@ -20,7 +20,7 @@ all_true_subjects = ['318', '352', '151', '194', '121', '21', '48', '261', '125'
 all_false_subjects = ['118', '146', '119', '213', '62', '27', '294', '128', '6', '124', '206', '193', '136', '20', '5', '163', '111', '202', '153']
 
 # Creating n_splits val_sets to be used for cross validation
-kfold_log = os.path.join('..', 'logs', 'kfold_logs', str(time.time()))
+kfold_log = os.path.join('logs', 'kfold_logs', str(time.time()))
 n_splits = 5
 kf_true = KFold(n_splits)
 kf_false = KFold(n_splits)
@@ -31,8 +31,8 @@ for ((true_train_index, true_val_index), (false_train_index, false_val_index)) i
     print(nth_fold)
     val_subs.append(nth_fold)
  
-for val_set in val_subs:
-    print(val_set)
+for i, val_set in enumerate(val_subs):
+    print(f'Starting training for the {i}th fold, with validation subjects: {val_set}')
     # Training the ResNet.
     print("\n\n+++++ Running 3_train.py +++++")
     train_output = train_resnet(batch_size=config.args.batch_size,
@@ -61,7 +61,7 @@ for val_set in val_subs:
                 architecture=config.args.architecture,
                 val_subjects=val_set,
                 early_stopping=True,
-                early_stopping_threshold=config.args.early_stopping_threshold)
+                early_stopping_threshold=2)
     
     with open(kfold_log, 'a') as log:
         log.write(f'{train_output}\n')

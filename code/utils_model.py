@@ -28,6 +28,7 @@ import ShuffleNet
 import config
 from utils import (get_classes, get_log_csv_name)
 from compute_stats import compute_stats
+from config import path_mean, path_std
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
@@ -280,6 +281,7 @@ def train_helper(model: torchvision.models.resnet.ResNet,
     for epoch in range(start_epoch, num_epochs):
         if early_stopping == True:
             if early_stopper.indicator == True:
+                print('Early stopping threshold has been reached')
                 break
 
         epoch_start = time.time()
@@ -359,8 +361,8 @@ def train_helper(model: torchvision.models.resnet.ResNet,
 
             val_all_labels[start:end] = val_labels.detach().cpu()
             val_all_predicts[start:end] = val_preds.detach().cpu()
-            early_stopper.update(val_running_loss)
-
+            
+        
         vtrack.plot_and_save(epoch)
         vtrack.reset()
         
@@ -375,6 +377,7 @@ def train_helper(model: torchvision.models.resnet.ResNet,
         # Store validation diagnostics.
         val_loss = val_running_loss / dataset_sizes["val"]
         val_acc = val_running_corrects / dataset_sizes["val"]
+        early_stopper.update(val_loss, float(val_acc))
 
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
@@ -419,7 +422,7 @@ def train_helper(model: torchvision.models.resnet.ResNet,
     print(f"\ntraining complete in "
           f"{(time.time() - since) // 60:.2f} minutes")
     
-    return {'best validation loss': early_stopper.best_loss,
+    return {'best validation loss': early_stopper.best_loss, 'accuracy at best val_loss': early_stopper.accuracy, 
             'epochs': epoch}
 
 
@@ -799,13 +802,6 @@ class Tracker():
         # This is the input for model training, automatically built.
         train_patches = args.train_folder.joinpath("train")
         val_patches = args.train_folder.joinpath("val")
-
-        # Compute the mean and standard deviation of the image patches from the specified folder.
-        # if args.normalise:
-        path_mean, path_std = compute_stats(folderpath=train_patches, image_ext=args.image_ext)
-        # else:
-        # path_mean = [0,0,0]
-        # path_std = [1,1,1]
 
         # Only used is resume_checkpoint is True.
         resume_checkpoint_path = args.checkpoints_folder.joinpath(args.checkpoint_file)

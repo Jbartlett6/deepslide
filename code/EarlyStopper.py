@@ -11,19 +11,21 @@ class EarlyStopper():
     '''
     def __init__(self, threshold):
         self.threshold = threshold
-        self.best_loss = math.inf 
+        self.best_loss = math.inf
+        self.accuracy = None 
         self.indicator = False
         self.steps_since_improvement = 0
 
-    def update(self, loss):
+    def update(self, loss, accuracy):
         if self.indicator == False:
             if (loss < self.best_loss):
                 self.best_loss = loss
+                self.accuracy = accuracy
                 self.steps_since_improvement = 0
             else:
                 self.steps_since_improvement += 1
                 if self.steps_since_improvement > self.threshold:
-                    self.indicator == True
+                    self.indicator = True
         print(f'''EarlyStopper Updated: \n
               Steps since improvement: {self.steps_since_improvement} \n
               Best loss: {self.best_loss}

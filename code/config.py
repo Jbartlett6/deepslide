@@ -263,6 +263,17 @@ parser.add_argument("--save_interval",
                     type=int,
                     default=1,
                     help="Number of epochs between saving checkpoints")
+parser.add_argument("--early_stopping",
+                    type=bool,
+                    default=False,
+                    help="Whether to perform early stopping during in training")
+parser.add_argument("--early_stopping_threshold",
+                    type=int,
+                    default=5,
+                    help="""The number of epochs without improvement before the training
+                    loop is broke by early stopping. This option is only neccessary - and will only make
+                    difference if --early_stopping is True.""")
+
 # Where models are saved.
 parser.add_argument("--checkpoints_folder",
                     type=Path,

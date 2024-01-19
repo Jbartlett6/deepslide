@@ -33,6 +33,7 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
 import ValidationTracker as VT
+from EarlyStopper import EarlyStopper
 
 
 
@@ -182,7 +183,8 @@ def print_params(train_folder: Path, num_epochs: int, num_layers: int,
                  learning_rate_decay: float, resume_checkpoint: bool,
                  resume_checkpoint_path: Path, save_interval: int,
                  checkpoints_folder: Path, pretrain: bool,
-                 log_csv: Path) -> None:
+                 log_csv: Path, early_stopping: bool, 
+                 early_stopping_threshold: int) -> None:
     """
     Print the configuration of the model.
 
@@ -214,7 +216,9 @@ def print_params(train_folder: Path, num_epochs: int, num_layers: int,
           f"save_interval: {save_interval}\n"
           f"output in checkpoints_folder: {checkpoints_folder}\n"
           f"pretrain: {pretrain}\n"
-          f"log_csv: {log_csv}\n\n")
+          f"log_csv: {log_csv}\n"
+          f"early stopping: {early_stopping}\n"
+          f"early stopping threshold: {early_stopping_threshold}\n\n")
 
 
 ###########################################
@@ -230,7 +234,8 @@ def train_helper(model: torchvision.models.resnet.ResNet,
                  writer: IO, device: torch.device, start_epoch: int,
                  batch_size: int, save_interval: int, checkpoints_folder: Path,
                  num_layers: int, classes: List[str],
-                 num_classes: int, path_mean: List[float], path_std: List[float]) -> None:
+                 num_classes: int, path_mean: List[float], path_std: List[float], 
+                 early_stopping: bool, early_stopping_threshold: int) -> None:
     """
     Function for training ResNet.
 
@@ -255,6 +260,7 @@ def train_helper(model: torchvision.models.resnet.ResNet,
     #Initialising loss tracker JB
     loss_tracker = Tracker()
     vtrack = VT.ValidationTracker(loss_tracker.writer)
+    early_stopper = EarlyStopper(early_stopping_threshold)
     loss_tracker.log_config_file(config.args)
     since = time.time()
 
@@ -272,6 +278,10 @@ def train_helper(model: torchvision.models.resnet.ResNet,
 
     # Train for specified number of epochs.
     for epoch in range(start_epoch, num_epochs):
+        if early_stopping == True:
+            if early_stopper.indicator == True:
+                break
+
         epoch_start = time.time()
         # Training phase.
         model.train(mode=True)
@@ -349,6 +359,7 @@ def train_helper(model: torchvision.models.resnet.ResNet,
 
             val_all_labels[start:end] = val_labels.detach().cpu()
             val_all_predicts[start:end] = val_preds.detach().cpu()
+            early_stopper.update(val_running_loss)
 
         vtrack.plot_and_save(epoch)
         vtrack.reset()
@@ -407,6 +418,9 @@ def train_helper(model: torchvision.models.resnet.ResNet,
     # Print training information at the end.
     print(f"\ntraining complete in "
           f"{(time.time() - since) // 60:.2f} minutes")
+    
+    return {'best validation loss': early_stopper.best_loss,
+            'epochs': epoch}
 
 
 def train_resnet(
@@ -418,7 +432,8 @@ def train_resnet(
         color_jitter_hue: float, color_jitter_saturation: float,
         path_mean: List[float], path_std: List[float], num_classes: int,
         num_layers: int, pretrain: bool, checkpoints_folder: Path,
-        num_epochs: int, save_interval: int, architecture:str) -> None:
+        num_epochs: int, save_interval: int, architecture:str, early_stopping: bool, 
+        early_stopping_threshold: int, val_subjects = None) -> None:
     """
     Main function for training ResNet.
 
@@ -456,11 +471,13 @@ def train_resnet(
         path_mean=path_mean,
         path_std=path_std)
 
-    image_datasets = {
-        x: datasets.ImageFolder(root=str(train_folder.joinpath(x)),
-                                transform=data_transforms[x])
-        for x in ("train", "val")
-    }
+    # image_datasets = {
+    #     x: datasets.ImageFolder(root=str(train_folder.joinpath(x)),
+    #                             transform=data_transforms[x])
+    #     for x in ("train", "val")
+    # }
+
+    image_datasets = datasets.create_image_datasets(data_transforms, val_subjects)
 
     dataloaders = {
         x: torch.utils.data.DataLoader(dataset=image_datasets[x],
@@ -511,7 +528,9 @@ def train_resnet(
                  resume_checkpoint_path=resume_checkpoint_path,
                  save_interval=save_interval,
                  train_folder=train_folder,
-                 weight_decay=weight_decay)
+                 weight_decay=weight_decay,
+                 early_stopping=early_stopping,
+                 early_stopping_threshold=early_stopping_threshold)
 
     # Logging the model after every epoch.
     # Confirm the output directory exists.
@@ -520,7 +539,7 @@ def train_resnet(
     with log_csv.open(mode="w") as writer:
         writer.write("epoch,train_loss,train_acc,val_loss,val_acc\n")
         # Train the model.
-        train_helper(model=model,
+        train_results = train_helper(model=model,
                      dataloaders=dataloaders,
                      dataset_sizes=dataset_sizes,
                      criterion=nn.CrossEntropyLoss(),
@@ -537,7 +556,11 @@ def train_resnet(
                      classes=classes,
                      num_classes=num_classes,
                      path_mean=path_mean,
-                     path_std=path_std)
+                     path_std=path_std,
+                     early_stopping=early_stopping,
+                     early_stopping_threshold = early_stopping_threshold)
+    train_results['val subjects'] = val_subjects
+    return train_results    
 
 
 ###########################################

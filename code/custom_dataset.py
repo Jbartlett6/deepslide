@@ -1,3 +1,5 @@
+import config
+
 import os
 import os.path
 from typing import Any, Callable, cast, Dict, List, Optional, Tuple, Union
@@ -375,7 +377,7 @@ def create_image_datasets(data_transforms, val_subjects=None):
     Function to create a training and validation datasets from one master dataset containing all patches. 
     the indices can be specified or 
     '''
-    image_dataset = ImageFolder(root='/mnt/d/deepslide_data/Train_Folders/train_macenko_siewert_tumour_ALL')
+    image_dataset = ImageFolder(root=config.args.train_folder)
 
     if val_subjects == None:
         all_true_subjects = ['318', '352', '151', '194', '121', '21', '48', '261', '125', '159', '162']

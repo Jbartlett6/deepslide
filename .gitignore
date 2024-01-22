@@ -14,3 +14,5 @@ OES_tools/2023-09-28_initialconfig.txt
 events.out*
 OES_tools/deepslide_options.txt
 sbatch_deepslide_train_GPU_latest.out
+.vscode/launch.json
+logs/*

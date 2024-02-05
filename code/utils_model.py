@@ -10,6 +10,7 @@ import random
 import time
 from pathlib import Path
 from typing import (Dict, IO, List, Tuple)
+import os
 
 import numpy as np
 import pandas as pd
@@ -274,6 +275,10 @@ def train_helper(model: torchvision.models.resnet.ResNet,
                                      dtype=torch.long).cpu()
     val_all_labels = torch.empty(size=(dataset_sizes["val"], ),
                                  dtype=torch.long).cpu()
+    val_all_filenames = [0 for _ in range(len(val_all_labels))]
+
+    val_all_outputs = torch.empty(size=(dataset_sizes["val"], 2),
+                                   dtype=torch.float).cpu()
     val_all_predicts = torch.empty(size=(dataset_sizes["val"], ),
                                    dtype=torch.long).cpu()
 
@@ -361,10 +366,12 @@ def train_helper(model: torchvision.models.resnet.ResNet,
 
             val_all_labels[start:end] = val_labels.detach().cpu()
             val_all_predicts[start:end] = val_preds.detach().cpu()
-            
-        
+            val_all_outputs[start:end] = val_outputs.detach().cpu()
+            val_all_filenames[start:end] = list(filenames)
+
         vtrack.plot_and_save(epoch)
         vtrack.reset()
+        validation_logger(val_all_labels, val_all_predicts, val_all_filenames, val_all_outputs, writer)
         
         print('Validation confusion Matrix:')
         cm = calculate_confusion_matrix(all_labels=val_all_labels.numpy(),
@@ -391,7 +398,7 @@ def train_helper(model: torchvision.models.resnet.ResNet,
         # Remaining things related to training.
         if epoch % save_interval == 0:
             epoch_output_path = checkpoints_folder.joinpath(
-                f"resnet{num_layers}_e{epoch}_va{val_acc:.5f}.pt")
+                f"resnet{num_layers}_e{epoch}_va{val_acc:.5f}_{writer.name.split('/')[-1][4:-4]}.pt")
 
             # Confirm the output directory exists.
             epoch_output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -842,4 +849,19 @@ class Tracker():
         
         self.writer.add_text('Configuration/config', config_string, global_step=0)
 
+def validation_logger(labels, predictions, filenames, outputs, writer):
+    
+    filepath = os.path.join(writer.name.split('/')[0], 'validation_logs', writer.name.split('/')[-1])
+    
+    normalized_outputs = outputs / outputs.sum(dim=1, keepdim=True)
+    confidence = torch.max(normalized_outputs, dim = 1)[0]
+
+    subjects = [fn.split('/')[-1].split('_')[0]for fn in filenames]
+    scenes = [fn.split('/')[-1].split('_')[4].split(' ')[-1].split('-')[0] for fn in filenames]
+    patches = [fn.split('/')[-1].split('_')[-1][:-4] for fn in filenames]
+
+    df = pd.DataFrame({'Subjects':subjects, 'Scenes': scenes, 'Patches':patches, 'Labels': labels, 'Predictions':predictions, 'Confidence': confidence})
+    df.to_csv(filepath, index=False)
+
+    return 0 
 

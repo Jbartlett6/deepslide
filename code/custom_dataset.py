@@ -386,8 +386,9 @@ def create_image_datasets(data_transforms, val_subjects=None):
         sample_false_subjects = random.sample(all_false_subjects, k=2)
         val_subjects = sample_true_subjects + sample_false_subjects
 
-    print(f'The vaidation set contains subjects {val_subjects}')
+    print(f'The validation set contains subjects {val_subjects}')
 
+    # To modfiy the dataset for debugging change manually set train/val_idxs e.g. train_idxs = [i for _ in range(100)]
     train_idxs, val_idxs = get_dataset_idx(image_dataset, val_subjects)
 
     image_subsets = {'train': torch.utils.data.Subset(image_dataset, train_idxs),

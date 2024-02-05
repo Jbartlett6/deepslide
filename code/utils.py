@@ -39,7 +39,7 @@ def get_log_csv_name(log_folder: Path) -> Path:
     """
     now = datetime.datetime.now()
 
-    return log_folder.joinpath(f"log_{now.month}{now.day}{now.year}"
+    return log_folder.joinpath(f"log_{now.year}{now.month:02d}{now.day:02d}"
                                f"_{now.hour}{now.minute}{now.second}.csv")
 
 

@@ -292,3 +292,11 @@ class ShuffleNet(nn.Module):
         x = self.fc(x)
 
         return F.log_softmax(x, dim=1)
+    
+if __name__ == '__main__':
+    model = ShuffleNet(num_classes=2)
+    print(model)
+
+    # Counting the parameters
+    total_params = sum(p.numel() for p in model.parameters())
+    print(f"Total number of parameters: {total_params}")

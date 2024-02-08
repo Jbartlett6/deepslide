@@ -102,7 +102,7 @@ parser.add_argument("--labels_test",
 parser.add_argument(
     "--train_folder",
     type=Path,
-    default=Path("train_folder"),
+    default=Path("train_macenko_siewert_tumour_ALL"),
     help="Location of the automatically built training input folder")
 
 # Folders of patches by WSI in training set, used for finding training accuracy at WSI level.

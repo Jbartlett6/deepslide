@@ -26,7 +26,7 @@ from torch.utils.tensorboard import SummaryWriter
 import sys
 import math
 import ShuffleNet
-
+import SimpleCNN
 import config
 from utils import (get_classes, get_log_csv_name)
 from compute_stats import compute_stats
@@ -134,10 +134,13 @@ def create_model(num_layers: int, num_classes: int,
             model.load_state_dict(state_dict=pretrained, strict=False)
     elif architecture == "ShuffleNet":
         model = ShuffleNet.ShuffleNet(num_classes=2)
+    elif architecture == "SimpleCNN":
+        model = SimpleCNN.CustomCNN() #CustomCNN
     else:
-        assert architecture in ("ResNet", "ShuffleNet"), f"Architecture ({architecture}) is not in currently implemented architectures: (\"ResNet\", \"ShuffleNet\")"
+        assert architecture in ("ResNet", "ShuffleNet", "SimpleCNN"), f"Architecture ({architecture}) is not in currently implemented architectures: (\"ResNet\", \"ShuffleNet\", \"SimpleCNN\")"
     
     return model
+
 
 
 def get_data_transforms(color_jitter_brightness: float,

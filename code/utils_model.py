@@ -862,6 +862,7 @@ def validation_logger(labels, predictions, filenames, outputs, writer):
 
     subjects = [fn.split('/')[-1].split('_')[0]for fn in filenames]
     scenes = [fn.split('/')[-1].split('_')[4].split(' ')[-1].split('-')[0] for fn in filenames]
+    # scenes = [fn.split('Scene ')[-1][:3] for fn in filenames]
     patches = [fn.split('/')[-1].split('_')[-1][:-4] for fn in filenames]
 
     df = pd.DataFrame({'Subjects':subjects, 'Scenes': scenes, 'Patches':patches, 'Labels': labels, 'Predictions':predictions, 'Confidence': confidence})
